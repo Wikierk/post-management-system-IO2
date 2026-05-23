@@ -9,6 +9,8 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
+import { CreateParcel } from "./pages/CreateParcel";
+import { Tracking } from "./pages/Tracking";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -24,7 +26,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
+          <Route path="/tracking" element={<Tracking />} />{" "}
           <Route
             path="/dashboard"
             element={
@@ -33,7 +35,14 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
-
+          <Route
+            path="/create-parcel"
+            element={
+              <ProtectedRoute>
+                <CreateParcel />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
       </Router>
