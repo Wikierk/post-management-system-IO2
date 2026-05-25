@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.IO2.backend.parcel.model.Parcel;
+import org.IO2.backend.parcel.pdf.PdfLabelGenerator;
 import org.IO2.backend.parcel.service.ParcelService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,6 +21,7 @@ import java.util.List;
 public class ParcelController {
 
     private final ParcelService parcelService;
+    private final PdfLabelGenerator pdfGenerator;
 
     @PostMapping
     @Operation(summary = "Nadaj nową paczkę")
@@ -62,5 +64,16 @@ public class ParcelController {
     @Operation(summary = "Przypisz paczkę do aktualnie zalogowanego kuriera")
     public ResponseEntity<Parcel> assignToCourier(@PathVariable String trackingNumber, Authentication auth) {
         return ResponseEntity.ok(parcelService.assignToCourier(trackingNumber, auth.getName()));
+    }
+
+    @GetMapping(value = "/{trackingNumber}/label", produces = org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+    @Operation(summary = "Pobierz etykietę PDF dla paczki")
+    public ResponseEntity<byte[]> getLabelPdf(@PathVariable String trackingNumber) {
+        Parcel parcel = parcelService.getParcelByTracking(trackingNumber);
+        byte[] pdfBytes = pdfGenerator.generateLabel(parcel);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=etykieta_" + trackingNumber + ".pdf")
+                .body(pdfBytes);
     }
 }

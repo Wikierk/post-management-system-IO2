@@ -4,6 +4,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { ClientDashboard } from "./dashboards/ClientDashboard";
 import { CourierDashboard } from "./dashboards/CourierDashboard";
 import { SortingDashboard } from "./dashboards/SortingDashboard";
+import { CustomerServiceDashboard } from "./dashboards/CustomerServiceDashboard";
+import { AdminDashboard } from "./dashboards/AdminDashboard";
 
 export const MainDashboard: React.FC = () => {
   const { role, logout } = useAuth();
@@ -22,10 +24,10 @@ export const MainDashboard: React.FC = () => {
         return <CourierDashboard />;
       case "SORTING_WORKER":
         return <SortingDashboard />;
+      case "CUSTOMER_SERVICE":
+        return <CustomerServiceDashboard />;
       case "ADMIN":
-        return (
-          <div className="p-4 bg-red-100">Panel Administratora (Wkrótce)</div>
-        );
+        return <AdminDashboard />;
       default:
         return <p>Nieznana rola: {role}</p>;
     }
