@@ -1,6 +1,7 @@
 package org.IO2.backend.controller;
 
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
 
     @PostMapping("/register")
+    @Operation(summary = "Rejestracja nowego użytkownika")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
         if(userRepository.findByEmail(request.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().build();
@@ -40,19 +42,29 @@ public class AuthController {
                 .build();
 
         userRepository.save(user);
-        var jwtToken = jwtService.generateToken(user);
+
+        var extraClaims = new java.util.HashMap<String, Object>();
+        extraClaims.put("role", user.getRole().name());
+        var jwtToken = jwtService.generateToken(extraClaims, user);
+
         return ResponseEntity.ok(new AuthResponse(jwtToken));
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Logowanie użytkownika")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
         var user = userRepository.findByEmail(request.getEmail()).orElseThrow();
-        var jwtToken = jwtService.generateToken(user);
+
+        var extraClaims = new java.util.HashMap<String, Object>();
+        extraClaims.put("role", user.getRole().name());
+        var jwtToken = jwtService.generateToken(extraClaims, user);
+
         return ResponseEntity.ok(new AuthResponse(jwtToken));
     }
+
 
     @Data
     public static class RegisterRequest {

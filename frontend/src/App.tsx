@@ -8,9 +8,9 @@ import {
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
-import { Dashboard } from "./pages/Dashboard";
 import { CreateParcel } from "./pages/CreateParcel";
 import { Tracking } from "./pages/Tracking";
+import { MainDashboard } from "./pages/MainDashboard";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -31,7 +31,7 @@ const App: React.FC = () => {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <MainDashboard />
               </ProtectedRoute>
             }
           />
