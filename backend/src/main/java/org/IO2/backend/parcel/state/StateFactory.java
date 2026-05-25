@@ -9,6 +9,7 @@ public class StateFactory {
             case PAID -> new PaidState();
             case IN_SORTING -> new InSortingState();
             case OUT_FOR_DELIVERY -> new OutForDeliveryState();
+            case IN_COMPLAINT -> new InComplaintState();
             default -> throw new IllegalStateException("Osiągnięto stan końcowy lub nieznany: " + status);
         };
     }

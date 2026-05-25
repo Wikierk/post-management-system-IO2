@@ -6,5 +6,6 @@ public enum ParcelStatus {
     IN_SORTING,
     OUT_FOR_DELIVERY,
     DELIVERED,
-    RETURNED
+    RETURNED,
+    IN_COMPLAINT
 }

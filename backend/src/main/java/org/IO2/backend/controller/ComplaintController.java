@@ -35,6 +35,9 @@ public class ComplaintController {
         User user = userRepository.findByEmail(auth.getName()).orElseThrow();
         Parcel parcel = parcelRepository.findByTrackingNumber(request.getTrackingNumber()).orElseThrow();
 
+        parcel.setStatus(org.IO2.backend.parcel.model.ParcelStatus.IN_COMPLAINT);
+        parcelRepository.save(parcel);
+
         Complaint complaint = Complaint.builder()
                 .parcel(parcel)
                 .submittedBy(user)

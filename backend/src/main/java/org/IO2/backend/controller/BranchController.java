@@ -41,4 +41,15 @@ public class BranchController {
         branchRepository.deleteById(id);
         return ResponseEntity.ok().build();
     }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Edytuj placówkę")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Branch> updateBranch(@PathVariable Long id, @RequestBody Branch updated) {
+        Branch branch = branchRepository.findById(id).orElseThrow();
+        branch.setName(updated.getName());
+        branch.setAddress(updated.getAddress());
+        branch.setType(updated.getType());
+        return ResponseEntity.ok(branchRepository.save(branch));
+    }
 }
