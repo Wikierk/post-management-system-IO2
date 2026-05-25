@@ -41,6 +41,7 @@ public class ParcelService {
     public List<Parcel> getMyParcels(String email) { return parcelRepository.findBySenderEmail(email); }
     public List<Parcel> getUnassignedParcels() { return parcelRepository.findByCourierIsNull(); }
     public List<Parcel> getCourierParcels(String email) { return parcelRepository.findByCourierEmail(email); }
+    public List<Parcel> getAllParcels() { return parcelRepository.findAll(); }
 
     @Transactional
     public Parcel assignToCourier(String trackingNumber, String courierEmail) {
@@ -67,6 +68,8 @@ public class ParcelService {
 
         return savedParcel;
     }
+
+
 }
 
 

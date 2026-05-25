@@ -8,9 +8,11 @@ import org.IO2.backend.parcel.model.Parcel;
 import org.IO2.backend.parcel.pdf.PdfLabelGenerator;
 import org.IO2.backend.parcel.service.ParcelService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -76,4 +78,18 @@ public class ParcelController {
                 .header("Content-Disposition", "attachment; filename=etykieta_" + trackingNumber + ".pdf")
                 .body(pdfBytes);
     }
+
+    @GetMapping("/finance-report")
+    @Operation(summary = "Generuj raport finansowy (Admin)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BigDecimal> getFinancialReport() {
+        List<Parcel> allParcels = parcelService.getAllParcels();
+        BigDecimal totalRevenue = allParcels.stream()
+                .map(Parcel::getPrice)
+                .filter(price -> price != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return ResponseEntity.ok(totalRevenue);
+    }
+
 }
