@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.IO2.backend.parcel.model.Parcel;
+import org.IO2.backend.parcel.model.ParcelStatus;
 import org.IO2.backend.parcel.pdf.PdfLabelGenerator;
 import org.IO2.backend.parcel.service.ParcelService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,6 +26,22 @@ import java.util.List;
 @Tag(name = "Przesyłki", description = "Zarządzanie paczkami")
 @SecurityRequirement(name = "bearerAuth")
 public class ParcelController {
+
+    @lombok.Data
+    public static class WalkInRequest {
+        private String senderFirstName;
+        private String senderLastName;
+        private String senderEmail;
+        private Parcel parcelData;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class HistoryDto {
+        private String status;
+        private String date;
+        private String branchInfo;
+    }
 
     private final ParcelService parcelService;
     private final PdfLabelGenerator pdfGenerator;
@@ -92,7 +109,7 @@ public class ParcelController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         List<Parcel> allParcels = parcelService.getAllParcels();
-        
+
         LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : LocalDateTime.MIN;
         LocalDateTime end = (endDate != null) ? endDate.atTime(LocalTime.MAX) : LocalDateTime.MAX;
 
@@ -104,5 +121,54 @@ public class ParcelController {
 
         return ResponseEntity.ok(totalRevenue);
     }
+
+
+
+    @PostMapping("/walk-in")
+    @Operation(summary = "Nadaj paczkę dla klienta bez konta (Okienko)")
+    @PreAuthorize("hasRole('CUSTOMER_SERVICE') or hasRole('ADMIN')")
+    public ResponseEntity<Parcel> createWalkInParcel(@RequestBody WalkInRequest request) {
+        Parcel parcel = parcelService.createWalkInParcel(
+                request.getParcelData(),
+                request.getSenderFirstName(),
+                request.getSenderLastName(),
+                request.getSenderEmail()
+        );
+        return ResponseEntity.ok(parcel);
+    }
+
+    @PutMapping("/{trackingNumber}/pay")
+    @Operation(summary = "Opłać paczkę w okienku")
+    @PreAuthorize("hasRole('CUSTOMER_SERVICE') or hasRole('ADMIN')")
+    public ResponseEntity<Parcel> payForParcel(@PathVariable String trackingNumber, Authentication auth) {
+        return ResponseEntity.ok(parcelService.payForParcel(trackingNumber, auth.getName()));
+    }
+
+    @PutMapping("/{trackingNumber}/override-status")
+    @Operation(summary = "Wymuś dowolny status i przypisz placówkę (Okienko)")
+    @PreAuthorize("hasRole('CUSTOMER_SERVICE') or hasRole('ADMIN')")
+    public ResponseEntity<Parcel> overrideStatus(
+            @PathVariable String trackingNumber,
+            @RequestParam ParcelStatus status,
+            @RequestParam(required = false) Long branchId,
+            Authentication auth) {
+        return ResponseEntity.ok(parcelService.overrideStatus(trackingNumber, status, branchId, auth.getName()));
+    }
+
+
+
+    @PutMapping("/{trackingNumber}/pay/client")
+    @Operation(summary = "Opłać własną paczkę z poziomu Panelu Klienta")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<Parcel> payForParcelClient(@PathVariable String trackingNumber, Authentication auth) {
+        return ResponseEntity.ok(parcelService.payForParcelClient(trackingNumber, auth.getName()));
+    }
+
+    @GetMapping("/{trackingNumber}/history")
+    @Operation(summary = "Pobierz pełną historię statusów paczki (Publiczne)")
+    public ResponseEntity<List<HistoryDto>> getParcelHistory(@PathVariable String trackingNumber) {
+        return ResponseEntity.ok(parcelService.getParcelHistory(trackingNumber));
+    }
+
 
 }

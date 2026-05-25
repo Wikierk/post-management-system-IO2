@@ -15,6 +15,7 @@ export interface Parcel {
     | "IN_SORTING"
     | "OUT_FOR_DELIVERY"
     | "DELIVERED"
+    | "IN_COMPLAINT"
     | "RETURNED";
   createdAt?: string;
 }
