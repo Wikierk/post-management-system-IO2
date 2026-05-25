@@ -21,12 +21,19 @@ public class Parcel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     @Column(unique = true, nullable = false)
     private String trackingNumber;
 
     @ManyToOne
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
+
+    @ManyToOne
+    @JoinColumn(name = "courier_id")
+    private User courier;
 
     private String receiverName;
     private String receiverEmail;

@@ -8,4 +8,8 @@ import java.util.Optional;
 public interface ParcelRepository extends JpaRepository<Parcel, Long> {
     Optional<Parcel> findByTrackingNumber(String trackingNumber);
     List<Parcel> findBySenderEmail(String email);
+
+    List<Parcel> findByCourierIsNull();
+    List<Parcel> findByCourierEmail(String email);
 }
+

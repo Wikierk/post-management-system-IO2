@@ -46,9 +46,21 @@ public class ParcelController {
         return ResponseEntity.ok(parcelService.advanceStatus(trackingNumber));
     }
 
-    @GetMapping("/all")
-    @Operation(summary = "Pobierz wszystkie paczki (Dla kuriera/sortowni)")
-    public ResponseEntity<List<Parcel>> getAllParcels() {
-        return ResponseEntity.ok(parcelService.getAllParcels());
+    @GetMapping("/unassigned")
+    @Operation(summary = "Pobierz paczki bez kuriera")
+    public ResponseEntity<List<Parcel>> getUnassignedParcels() {
+        return ResponseEntity.ok(parcelService.getUnassignedParcels());
+    }
+
+    @GetMapping("/courier")
+    @Operation(summary = "Pobierz paczki przypisane do kuriera")
+    public ResponseEntity<List<Parcel>> getCourierParcels(Authentication auth) {
+        return ResponseEntity.ok(parcelService.getCourierParcels(auth.getName()));
+    }
+
+    @PutMapping("/{trackingNumber}/assign")
+    @Operation(summary = "Przypisz paczkę do aktualnie zalogowanego kuriera")
+    public ResponseEntity<Parcel> assignToCourier(@PathVariable String trackingNumber, Authentication auth) {
+        return ResponseEntity.ok(parcelService.assignToCourier(trackingNumber, auth.getName()));
     }
 }
