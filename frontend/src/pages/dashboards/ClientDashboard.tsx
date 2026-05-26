@@ -103,6 +103,23 @@ export const ClientDashboard: React.FC = () => {
     }
   };
 
+  const handleDownloadPdf = async (trackingNumber: string) => {
+    try {
+      const response = await api.get(`/parcels/${trackingNumber}/label`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `etykieta_${trackingNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      addToast("Błąd pobierania pliku PDF", "error");
+    }
+  };
+
   return (
     <div className="bg-white rounded shadow min-h-[600px] border-t-4 border-blue-600">
       {selectedParcelForDetails && (
@@ -191,6 +208,14 @@ export const ClientDashboard: React.FC = () => {
                         Opłać {p.price} PLN
                       </button>
                     )}
+                    {p.status !== "CREATED" && p.status !== "IN_COMPLAINT" && (
+                      <button
+                        onClick={() => handleDownloadPdf(p.trackingNumber!)}
+                        className="px-4 py-2 bg-gray-800 text-white font-bold rounded shadow hover:bg-gray-900 transition"
+                      >
+                        Pobierz PDF
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -249,7 +274,7 @@ export const ClientDashboard: React.FC = () => {
                   <option value="" disabled>
                     Wybierz paczkę do reklamacji...
                   </option>
-                  {parcels
+                  {activeParcels
                     .filter((p) => p.status !== "IN_COMPLAINT")
                     .map((p) => (
                       <option key={p.trackingNumber} value={p.trackingNumber}>
