@@ -67,7 +67,7 @@ public class ComplaintController {
     public ResponseEntity<Complaint> resolveComplaint(
             @PathVariable Long id,
             @RequestParam String status,
-            @RequestParam(required = false) String responseMessage) { 
+            @RequestParam(required = false) String responseMessage) {
 
         Complaint complaint = complaintRepository.findById(id).orElseThrow();
         complaint.setStatus(status);

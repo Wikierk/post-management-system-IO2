@@ -2,20 +2,32 @@ import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 import type { Parcel } from "../../types/parcel";
 import { useToast } from "../../context/ToastContext";
+import { ParcelDetailsModal } from "../../components/ParcelDetailsModal";
 
 export const CourierDashboard: React.FC = () => {
+  const { addToast } = useToast();
   const [unassignedParcels, setUnassignedParcels] = useState<Parcel[]>([]);
   const [myRouteParcels, setMyRouteParcels] = useState<Parcel[]>([]);
-  const { addToast } = useToast();
+  const [selectedParcelForDetails, setSelectedParcelForDetails] = useState<
+    string | null
+  >(null);
+
+  // NOWOŚĆ: Stan dla zaznaczonych paczek (Checkboxy)
+  const [selectedParcels, setSelectedParcels] = useState<string[]>([]);
+
   const fetchParcels = async () => {
     try {
       const unassignedRes = await api.get("/parcels/unassigned");
       setUnassignedParcels(unassignedRes.data);
-
       const myRouteRes = await api.get("/parcels/courier");
-      setMyRouteParcels(myRouteRes.data);
+      // Ukrywamy paczki już dostarczone z trasy
+      setMyRouteParcels(
+        myRouteRes.data.filter(
+          (p: Parcel) => !["DELIVERED", "RETURNED"].includes(p.status || ""),
+        ),
+      );
     } catch (error) {
-      console.error("Błąd ładowania paczek", error);
+      addToast("Błąd ładowania paczek", "error");
     }
   };
 
@@ -23,95 +35,210 @@ export const CourierDashboard: React.FC = () => {
     fetchParcels();
   }, []);
 
+  // Checkboxy logic
+  const toggleParcelSelection = (trackingNumber: string) => {
+    setSelectedParcels((prev) =>
+      prev.includes(trackingNumber)
+        ? prev.filter((t) => t !== trackingNumber)
+        : [...prev, trackingNumber],
+    );
+  };
+
+  const toggleAll = () => {
+    if (selectedParcels.length === myRouteParcels.length)
+      setSelectedParcels([]);
+    else setSelectedParcels(myRouteParcels.map((p) => p.trackingNumber!));
+  };
+
+  // --- AKCJE KURIERA ---
   const handleAssign = async (trackingNumber: string) => {
     try {
       await api.put(`/parcels/${trackingNumber}/assign`);
+      addToast("Paczka przypisana! Status: Wydana do doręczenia.", "success");
       fetchParcels();
-    } catch (error) {
+    } catch {
       addToast("Błąd przypisywania paczki", "error");
     }
   };
 
-  const handleAdvanceStatus = async (trackingNumber: string) => {
+  const setExplicitStatus = async (trackingNumber: string, status: string) => {
     try {
-      await api.put(`/parcels/${trackingNumber}/next-state`);
+      await api.put(
+        `/parcels/${trackingNumber}/override-status?status=${status}`,
+      );
+      addToast(`Zaktualizowano paczkę na: ${status}`, "success");
       fetchParcels();
-    } catch (error: any) {
-      // Obsługa OptimisticLockingFailureException
-      if (error.response?.status === 409 || error.response?.status === 500) {
-        addToast(
-          "Konflikt wersji! Ktoś inny właśnie zaktualizował tę paczkę.",
-          "error",
-        );
-      } else {
-        addToast("Błąd zmiany statusu paczki.", "error");
-      }
+    } catch {
+      addToast("Błąd zmiany statusu", "error");
+    }
+  };
+
+  const handleBulkDeliver = async () => {
+    if (selectedParcels.length === 0) return;
+    if (
+      !window.confirm(
+        `Czy na pewno oznaczyć ${selectedParcels.length} paczek jako DORĘCZONE?`,
+      )
+    )
+      return;
+
+    try {
+      // Wysyłamy żądania równolegle dla zaznaczonych paczek
+      await Promise.all(
+        selectedParcels.map((tracking) =>
+          api.put(`/parcels/${tracking}/override-status?status=DELIVERED`),
+        ),
+      );
+      addToast(
+        `Pomyślnie doręczono ${selectedParcels.length} paczek!`,
+        "success",
+      );
+      setSelectedParcels([]); // Czyścimy checkboxy
+      fetchParcels();
+    } catch {
+      addToast("Część paczek mogła nie zostać zaktualizowana.", "error");
+      fetchParcels();
     }
   };
 
   return (
-    <div className="space-y-8">
-      {/* Sekcja: Moja Trasa */}
+    <div className="space-y-8 min-h-[600px]">
+      {selectedParcelForDetails && (
+        <ParcelDetailsModal
+          trackingNumber={selectedParcelForDetails}
+          onClose={() => setSelectedParcelForDetails(null)}
+        />
+      )}
+
+      {/* SEKCJA TRASY KURIERA */}
       <div className="bg-white p-6 rounded shadow border-t-4 border-yellow-500">
-        <h2 className="text-xl font-bold mb-4 text-yellow-800">
-          Moja Trasa na dziś (Moje przypisane paczki)
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-yellow-800">
+            Moja Trasa (Wydane do doręczenia)
+          </h2>
+          {selectedParcels.length > 0 && (
+            <button
+              onClick={handleBulkDeliver}
+              className="px-6 py-2 bg-green-600 text-white font-bold rounded shadow hover:bg-green-700 animate-pulse"
+            >
+              Doręcz Zaznaczone ({selectedParcels.length})
+            </button>
+          )}
+        </div>
+
         {myRouteParcels.length === 0 ? (
-          <p>Brak paczek na trasie.</p>
+          <p className="text-gray-500">Brak aktywnych paczek na trasie.</p>
         ) : (
-          <ul className="space-y-3">
-            {myRouteParcels.map((p) => (
-              <li
-                key={p.trackingNumber}
-                className="p-4 border rounded flex justify-between items-center bg-yellow-50"
-              >
-                <div>
-                  <div className="font-bold">{p.trackingNumber}</div>
-                  <div className="text-sm">Odbiorca: {p.receiverName}</div>
-                  <div className="text-sm">Adres: {p.receiverAddress}</div>
-                  <div className="text-xs font-semibold text-blue-800 mt-1">
-                    Status: {p.status}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleAdvanceStatus(p.trackingNumber!)}
-                  className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700"
-                >
-                  Dalej (Zmień status)
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left bg-white border">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-3 border-b text-center">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 cursor-pointer"
+                      onChange={toggleAll}
+                      checked={
+                        selectedParcels.length === myRouteParcels.length &&
+                        myRouteParcels.length > 0
+                      }
+                    />
+                  </th>
+                  <th className="p-3 border-b">Paczka</th>
+                  <th className="p-3 border-b">Adres Dostawy</th>
+                  <th className="p-3 border-b text-right">Akcja Jawna</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myRouteParcels.map((p) => (
+                  <tr
+                    key={p.trackingNumber}
+                    className="hover:bg-yellow-50 border-b"
+                  >
+                    <td className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        className="w-5 h-5 cursor-pointer"
+                        checked={selectedParcels.includes(p.trackingNumber!)}
+                        onChange={() =>
+                          toggleParcelSelection(p.trackingNumber!)
+                        }
+                      />
+                    </td>
+                    <td className="p-3">
+                      <button
+                        onClick={() =>
+                          setSelectedParcelForDetails(p.trackingNumber!)
+                        }
+                        className="font-black text-blue-700 hover:underline"
+                      >
+                        {p.trackingNumber}
+                      </button>
+                      <div className="text-xs text-gray-500 font-bold uppercase">
+                        {p.status}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <div className="font-bold text-gray-800">
+                        {p.receiverName}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {p.receiverAddress}
+                      </div>
+                    </td>
+                    <td className="p-3 text-right space-x-2 whitespace-nowrap">
+                      <button
+                        onClick={() =>
+                          setExplicitStatus(p.trackingNumber!, "DELIVERED")
+                        }
+                        className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded shadow hover:bg-green-700"
+                      >
+                        DORĘCZ
+                      </button>
+                      <button
+                        onClick={() =>
+                          setExplicitStatus(p.trackingNumber!, "RETURNED")
+                        }
+                        className="px-4 py-2 bg-red-600 text-white text-sm font-bold rounded shadow hover:bg-red-700"
+                      >
+                        ZWROT / AWIZO
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Sekcja: Dostępne paczki */}
+      {/* SEKCJA OCZEKUJĄCYCH */}
       <div className="bg-white p-6 rounded shadow border-t-4 border-gray-400">
         <h2 className="text-xl font-bold mb-4 text-gray-800">
-          Paczki oczekujące (bez kuriera)
+          Paczki oczekujące (Do przypisania)
         </h2>
         {unassignedParcels.length === 0 ? (
-          <p>Wszystkie paczki zostały przypisane.</p>
+          <p className="text-gray-500">Brak nowych paczek w systemie.</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {unassignedParcels.map((p) => (
               <li
                 key={p.trackingNumber}
-                className="p-3 border rounded flex justify-between items-center bg-gray-50 hover:bg-gray-100"
+                className="p-4 border rounded-lg flex justify-between items-center bg-gray-50 hover:border-blue-300 transition"
               >
                 <div>
-                  <div className="font-bold text-gray-700">
+                  <div className="font-bold text-gray-800">
                     {p.trackingNumber}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {p.receiverAddress} | {p.weight} kg
+                  <div className="text-xs text-gray-500 mt-1">
+                    {p.receiverAddress}
                   </div>
                 </div>
                 <button
                   onClick={() => handleAssign(p.trackingNumber!)}
-                  className="px-3 py-1 text-sm text-gray-700 border border-gray-400 rounded hover:bg-gray-200"
+                  className="px-4 py-2 text-sm font-bold text-blue-700 border-2 border-blue-200 rounded hover:bg-blue-100"
                 >
-                  Weź paczkę
+                  Pobierz
                 </button>
               </li>
             ))}

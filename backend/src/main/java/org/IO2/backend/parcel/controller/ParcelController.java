@@ -146,7 +146,7 @@ public class ParcelController {
 
     @PutMapping("/{trackingNumber}/override-status")
     @Operation(summary = "Wymuś dowolny status i przypisz placówkę (Okienko)")
-    @PreAuthorize("hasRole('CUSTOMER_SERVICE') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER_SERVICE', 'ADMIN', 'COURIER', 'SORTING_WORKER')")
     public ResponseEntity<Parcel> overrideStatus(
             @PathVariable String trackingNumber,
             @RequestParam ParcelStatus status,

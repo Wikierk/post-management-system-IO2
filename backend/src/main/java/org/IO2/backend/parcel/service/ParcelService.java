@@ -68,9 +68,17 @@ public class ParcelService {
     public Parcel assignToCourier(String trackingNumber, String courierEmail) {
         Parcel parcel = getParcelByTracking(trackingNumber);
         if (parcel.getCourier() != null) throw new RuntimeException("Paczka jest już przypisana");
+
         User courier = userRepository.findByEmail(courierEmail).orElseThrow();
         parcel.setCourier(courier);
-        return parcelRepository.save(parcel);
+
+        // NOWOŚĆ: Automatyczna zmiana statusu i logowanie!
+        parcel.setStatus(ParcelStatus.OUT_FOR_DELIVERY);
+        Parcel savedParcel = parcelRepository.save(parcel);
+        saveHistory(savedParcel, courier, courier.getAssignedBranch());
+
+        eventPublisher.publishEvent(new ParcelStatusChangedEvent(this, savedParcel.getTrackingNumber(), savedParcel.getReceiverEmail(), savedParcel.getStatus()));
+        return savedParcel;
     }
 
     @Transactional
@@ -131,18 +139,20 @@ public class ParcelService {
     @Transactional
     public Parcel overrideStatus(String trackingNumber, ParcelStatus newStatus, Long branchId, String workerEmail) {
         Parcel parcel = getParcelByTracking(trackingNumber);
-
-        // Tutaj omijamy wzorzec State, bo to ręczna ingerencja uprawnionego pracownika
         parcel.setStatus(newStatus);
         Parcel savedParcel = parcelRepository.save(parcel);
 
         User worker = userRepository.findByEmail(workerEmail).orElse(null);
-        Branch branch = branchId != null ? branchRepository.findById(branchId).orElse(null) : null;
 
-        // Zapisujemy w historii GDZIE wystąpiła zmiana (Branch)
+        // NOWOŚĆ: Jeśli branchId nie zostało podane w zapytaniu (jak w Sortowni), pobierz placówkę przypisaną do konta pracownika!
+        Branch branch = null;
+        if (branchId != null) {
+            branch = branchRepository.findById(branchId).orElse(null);
+        } else if (worker != null && worker.getAssignedBranch() != null) {
+            branch = worker.getAssignedBranch();
+        }
+
         saveHistory(savedParcel, worker, branch);
-
-        // Publikujemy zdarzenie o zmianie
         eventPublisher.publishEvent(new ParcelStatusChangedEvent(this, savedParcel.getTrackingNumber(), savedParcel.getReceiverEmail(), savedParcel.getStatus()));
 
         return savedParcel;

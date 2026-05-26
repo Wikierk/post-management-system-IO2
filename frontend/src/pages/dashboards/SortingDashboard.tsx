@@ -14,24 +14,29 @@ export const SortingDashboard: React.FC = () => {
     if (!trackingNumber) return;
 
     try {
-      await api.put(`/parcels/${trackingNumber}/next-state`);
-      addToast(`Paczka ${trackingNumber} zeskanowana pomyślnie!`, "success");
+      // NOWOŚĆ: Używamy endpointu override-status zamiast next-state
+      await api.put(
+        `/parcels/${trackingNumber}/override-status?status=IN_SORTING`,
+      );
 
-      // Dodaj do lokalnej historii z godziną
+      addToast(
+        `Paczka ${trackingNumber} zeskanowana! Status: W Sortowni`,
+        "success",
+      );
+
       const now = new Date().toLocaleTimeString("pl-PL");
       setScannedParcels((prev) =>
         [{ number: trackingNumber, time: now }, ...prev].slice(0, 10),
-      ); // Pamiętaj 10 ostatnich
-
-      setTrackingNumber(""); // Wyczyść pole dla następnego skanowania
+      );
+      setTrackingNumber("");
     } catch (error: any) {
       if (error.response?.status === 409 || error.response?.status === 500) {
-        addToast("Konflikt wersji (Optimistic Lock).", "error");
-      } else {
         addToast(
-          `Błąd! Sprawdź czy paczka ${trackingNumber} istnieje i nie jest zablokowana.`,
+          "Konflikt wersji (Optimistic Lock). Ktoś skanował tę paczkę!",
           "error",
         );
+      } else {
+        addToast(`Błąd! Upewnij się, że paczka istnieje.`, "error");
       }
     }
   };
