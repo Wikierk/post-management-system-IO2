@@ -14,7 +14,6 @@ export const SortingDashboard: React.FC = () => {
     if (!trackingNumber) return;
 
     try {
-      // NOWOŚĆ: Używamy endpointu override-status zamiast next-state
       await api.put(
         `/parcels/${trackingNumber}/override-status?status=IN_SORTING`,
       );
