@@ -34,6 +34,9 @@ public class Complaint {
 
     private LocalDateTime submittedAt;
 
+    @Column(length = 1000)
+    private String adminResponse;
+
     @PrePersist
     protected void onCreate() {
         this.submittedAt = LocalDateTime.now();

@@ -202,12 +202,22 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const resolveComplaint = async (id: number, status: string) => {
+    const actionName = status === "ACCEPTED" ? "Uznanie" : "Odrzucenie";
+    const responseMsg = window.prompt(
+      `[${actionName} reklamacji] Podaj odpowiedź/uzasadnienie dla klienta (opcjonalnie):`,
+    );
+
+    if (responseMsg === null) return; // Kliknięto "Anuluj" w prompcie
+
     try {
-      await api.put(`/complaints/${id}/resolve?status=${status}`);
-      addToast("Rozpatrzono", "success");
+      const paramMsg = responseMsg
+        ? `&responseMessage=${encodeURIComponent(responseMsg)}`
+        : "";
+      await api.put(`/complaints/${id}/resolve?status=${status}${paramMsg}`);
+      addToast(`Reklamacja została rozpatrzona (${status})`, "success");
       fetchData();
     } catch {
-      addToast("Błąd", "error");
+      addToast("Błąd rozpatrywania reklamacji", "error");
     }
   };
 

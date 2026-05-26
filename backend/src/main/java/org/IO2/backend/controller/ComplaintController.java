@@ -64,9 +64,19 @@ public class ComplaintController {
     @PutMapping("/{id}/resolve")
     @Operation(summary = "Rozpatrz reklamację (Admin)")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Complaint> resolveComplaint(@PathVariable Long id, @RequestParam String status) {
+    public ResponseEntity<Complaint> resolveComplaint(
+            @PathVariable Long id,
+            @RequestParam String status,
+            @RequestParam(required = false) String responseMessage) { 
+
         Complaint complaint = complaintRepository.findById(id).orElseThrow();
-        complaint.setStatus(status); // ACCEPTED lub REJECTED
+        complaint.setStatus(status);
+
+        if (responseMessage != null && !responseMessage.isBlank()) {
+            complaint.setAdminResponse(responseMessage);
+        }
+
+
         return ResponseEntity.ok(complaintRepository.save(complaint));
     }
 
