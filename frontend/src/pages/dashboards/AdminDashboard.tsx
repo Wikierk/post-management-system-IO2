@@ -53,6 +53,13 @@ export const AdminDashboard: React.FC = () => {
     password: "",
   });
 
+  const [resolvingComplaint, setResolvingComplaint] =
+    useState<Complaint | null>(null);
+  const [resolveForm, setResolveForm] = useState({
+    message: "",
+    parcelAction: "RETURNED",
+  });
+
   // Stany dla formularza placówek
   const [branchForm, setBranchForm] = useState<Branch>({
     name: "",
@@ -201,20 +208,21 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const resolveComplaint = async (id: number, status: string) => {
-    const actionName = status === "ACCEPTED" ? "Uznanie" : "Odrzucenie";
-    const responseMsg = window.prompt(
-      `[${actionName} reklamacji] Podaj odpowiedź/uzasadnienie dla klienta (opcjonalnie):`,
-    );
-
-    if (responseMsg === null) return; // Kliknięto "Anuluj" w prompcie
-
+  const submitComplaintDecision = async (status: string) => {
+    if (!resolvingComplaint) return;
     try {
-      const paramMsg = responseMsg
-        ? `&responseMessage=${encodeURIComponent(responseMsg)}`
-        : "";
-      await api.put(`/complaints/${id}/resolve?status=${status}${paramMsg}`);
+      const params = new URLSearchParams();
+      params.append("status", status);
+      if (resolveForm.message)
+        params.append("responseMessage", resolveForm.message);
+      if (resolveForm.parcelAction)
+        params.append("parcelAction", resolveForm.parcelAction);
+
+      await api.put(
+        `/complaints/${resolvingComplaint.id}/resolve?${params.toString()}`,
+      );
       addToast(`Reklamacja została rozpatrzona (${status})`, "success");
+      setResolvingComplaint(null);
       fetchData();
     } catch {
       addToast("Błąd rozpatrywania reklamacji", "error");
@@ -629,17 +637,18 @@ export const AdminDashboard: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex space-x-2">
+                        {/* ZMIENIONE PRZYCISKI - Otwierają Modal */}
                         <button
-                          onClick={() => resolveComplaint(c.id, "ACCEPTED")}
-                          className="px-4 py-2 bg-green-600 text-white font-bold rounded shadow hover:bg-green-700"
+                          onClick={() => {
+                            setResolvingComplaint(c);
+                            setResolveForm({
+                              message: "",
+                              parcelAction: "RETURNED",
+                            });
+                          }}
+                          className="px-6 py-2 bg-gray-800 text-white font-bold rounded shadow hover:bg-gray-900 transition"
                         >
-                          Uznaj (Zwróć środki)
-                        </button>
-                        <button
-                          onClick={() => resolveComplaint(c.id, "REJECTED")}
-                          className="px-4 py-2 bg-red-600 text-white font-bold rounded shadow hover:bg-red-700"
-                        >
-                          Odrzuć
+                          Rozpatrz Zgłoszenie
                         </button>
                       </div>
                     </li>
@@ -757,6 +766,95 @@ export const AdminDashboard: React.FC = () => {
                 Zapisz Dane
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {resolvingComplaint && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-up">
+            <div className="bg-orange-600 p-4 text-white flex justify-between items-center">
+              <h3 className="font-bold text-lg">Rozpatrywanie Reklamacji</h3>
+              <button
+                onClick={() => setResolvingComplaint(null)}
+                className="font-bold text-xl hover:text-orange-200 transition"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="bg-gray-50 p-3 rounded border">
+                <p className="text-xs text-gray-500 font-bold uppercase mb-1">
+                  Zgłoszenie (Paczka: {resolvingComplaint.parcel.trackingNumber}
+                  )
+                </p>
+                <p className="text-gray-800 italic">
+                  "{resolvingComplaint.reason}"
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  Odpowiedź dla klienta (Uzasadnienie)
+                </label>
+                <textarea
+                  required
+                  value={resolveForm.message}
+                  onChange={(e) =>
+                    setResolveForm({ ...resolveForm, message: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg h-24 focus:ring focus:border-orange-300"
+                  placeholder="Wyjaśnij decyzję np. Paczka została uszkodzona..."
+                ></textarea>
+              </div>
+
+              <div className="border-t pt-4">
+                <label className="block text-sm font-bold text-red-700 mb-2">
+                  Decyzja systemowa: Co zrobić z paczką?
+                </label>
+                <select
+                  value={resolveForm.parcelAction}
+                  onChange={(e) =>
+                    setResolveForm({
+                      ...resolveForm,
+                      parcelAction: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-3 border-2 border-orange-200 rounded-lg font-bold text-gray-800 bg-orange-50"
+                >
+                  <option value="RETURNED">
+                    Archiwizuj: Zwróć do nadawcy (RETURNED)
+                  </option>
+                  <option value="DELIVERED">
+                    Archiwizuj: Oznacz jako Doręczoną (DELIVERED)
+                  </option>
+                  <option value="IN_SORTING">
+                    Przywróć do obiegu: Trafia na Sortownię (IN_SORTING)
+                  </option>
+                </select>
+                <p className="text-xs text-gray-500 mt-2">
+                  Paczka jest obecnie zablokowana w stanie IN_COMPLAINT.
+                  Wybierz, jak system ma postąpić z nią po zamknięciu
+                  zgłoszenia.
+                </p>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => submitComplaintDecision("ACCEPTED")}
+                  className="flex-1 py-3 bg-green-600 text-white font-black rounded shadow hover:bg-green-700 transition transform hover:-translate-y-1"
+                >
+                  UZNAJ (Akceptuj)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => submitComplaintDecision("REJECTED")}
+                  className="flex-1 py-3 bg-red-600 text-white font-black rounded shadow hover:bg-red-700 transition transform hover:-translate-y-1"
+                >
+                  ODRZUĆ
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

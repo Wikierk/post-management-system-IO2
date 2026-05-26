@@ -67,7 +67,8 @@ public class ComplaintController {
     public ResponseEntity<Complaint> resolveComplaint(
             @PathVariable Long id,
             @RequestParam String status,
-            @RequestParam(required = false) String responseMessage) {
+            @RequestParam(required = false) String responseMessage,
+            @RequestParam(required = false) String parcelAction) {
 
         Complaint complaint = complaintRepository.findById(id).orElseThrow();
         complaint.setStatus(status);
@@ -76,6 +77,18 @@ public class ComplaintController {
             complaint.setAdminResponse(responseMessage);
         }
 
+        if (parcelAction != null && !parcelAction.isBlank()) {
+            Parcel parcel = complaint.getParcel();
+            try {
+                org.IO2.backend.parcel.model.ParcelStatus newStatus =
+                        org.IO2.backend.parcel.model.ParcelStatus.valueOf(parcelAction);
+
+                parcel.setStatus(newStatus);
+                parcelRepository.save(parcel);
+            } catch (IllegalArgumentException e) {
+                System.err.println("Podano nieprawidłowy status dla paczki po reklamacji: " + parcelAction);
+            }
+        }
 
         return ResponseEntity.ok(complaintRepository.save(complaint));
     }
