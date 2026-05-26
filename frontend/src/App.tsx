@@ -11,6 +11,7 @@ import { Register } from "./pages/Register";
 import { CreateParcel } from "./pages/CreateParcel";
 import { Tracking } from "./pages/Tracking";
 import { MainDashboard } from "./pages/MainDashboard";
+import { ToastProvider } from "./context/ToastContext";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -21,32 +22,34 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/tracking" element={<Tracking />} />{" "}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <MainDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/create-parcel"
-            element={
-              <ProtectedRoute>
-                <CreateParcel />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/dashboard" />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/tracking" element={<Tracking />} />{" "}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <MainDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-parcel"
+              element={
+                <ProtectedRoute>
+                  <CreateParcel />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/dashboard" />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 

@@ -81,7 +81,11 @@ public class ParcelService {
         parcel.nextState(); // Zmiana statusu przez Wzorzec State
         Parcel savedParcel = parcelRepository.save(parcel);
 
-        saveHistory(savedParcel, user, null); // Zapisujemy nową historię w bazie!
+        // --- NOWOŚĆ: POBRANIE PLACÓWKI Z PROFILU PRACOWNIKA ---
+        Branch branch = (user != null) ? user.getAssignedBranch() : null;
+
+        // Zapisujemy nową historię w bazie z przypiętą placówką (jeśli pracownik ją posiada)
+        saveHistory(savedParcel, user, branch);
 
         eventPublisher.publishEvent(new ParcelStatusChangedEvent(this, savedParcel.getTrackingNumber(), savedParcel.getReceiverEmail(), savedParcel.getStatus()));
         return savedParcel;

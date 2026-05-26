@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
+import { useToast } from "../../context/ToastContext";
 
 interface Branch {
   id?: number;
@@ -47,6 +48,7 @@ export const AdminDashboard: React.FC = () => {
   const [revenue, setRevenue] = useState<number>(0);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const { addToast } = useToast();
 
   const fetchData = async () => {
     const [resBranches, resComplaints, resUsers, resPricings] =
@@ -89,7 +91,7 @@ export const AdminDashboard: React.FC = () => {
 
   const updatePricing = async (p: Pricing) => {
     await api.put(`/pricings/${p.id}`, p);
-    alert("Cennik zaktualizowany!");
+    addToast("Cennik zaktualizowany!", "success");
     fetchData();
   };
 

@@ -4,8 +4,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.IO2.backend.model.Branch;
 import org.IO2.backend.model.Role;
 import org.IO2.backend.model.User;
+import org.IO2.backend.repository.BranchRepository;
 import org.IO2.backend.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,6 +24,7 @@ import java.util.List;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final BranchRepository branchRepository;
 
     @GetMapping
     @Operation(summary = "Pobierz wszystkich użytkowników")
@@ -42,5 +45,26 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userRepository.deleteById(id);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/toggle-lock")
+    @Operation(summary = "Zablokuj / Odblokuj konto użytkownika")
+    public ResponseEntity<User> toggleUserLock(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElseThrow();
+        user.setLocked(!user.isLocked());
+        return ResponseEntity.ok(userRepository.save(user));
+    }
+
+    @PutMapping("/{id}/branch")
+    @Operation(summary = "Przypisz pracownika do placówki (Sortownia/Okienko)")
+    public ResponseEntity<User> assignBranch(@PathVariable Long id, @RequestParam(required = false) Long branchId) {
+        User user = userRepository.findById(id).orElseThrow();
+        if (branchId != null) {
+            Branch branch = branchRepository.findById(branchId).orElseThrow();
+            user.setAssignedBranch(branch);
+        } else {
+            user.setAssignedBranch(null); // Usunięcie przypisania
+        }
+        return ResponseEntity.ok(userRepository.save(user));
     }
 }

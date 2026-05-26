@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import type { Parcel } from "../../types/parcel";
+import { useToast } from "../../context/ToastContext";
 
 interface Branch {
   id: number;
@@ -36,6 +37,7 @@ export const CustomerServiceDashboard: React.FC = () => {
   // Stany - Ręczny Override Statusu
   const [selectedStatus, setSelectedStatus] = useState("IN_SORTING");
   const [selectedBranchId, setSelectedBranchId] = useState<number | "">("");
+  const { addToast } = useToast();
 
   useEffect(() => {
     api.get("/branches").then((res) => setBranches(res.data));
@@ -49,7 +51,10 @@ export const CustomerServiceDashboard: React.FC = () => {
       const res = await api.get(`/parcels/${trackingNumber}`);
       setParcel(res.data);
     } catch {
-      alert("Nie znaleziono paczki!");
+      addToast(
+        "Nie znaleziono paczki o podanym numerze lub wystąpił błąd.",
+        "error",
+      );
       setParcel(null);
     }
   };
@@ -72,24 +77,28 @@ export const CustomerServiceDashboard: React.FC = () => {
         },
       };
       const res = await api.post("/parcels/walk-in", payload);
-      alert(
-        `Zarejestrowano paczkę! Tracking: ${res.data.trackingNumber}. Klient musi opłacić: ${res.data.price} PLN.`,
+      addToast(
+        "Paczka zarejestrowana! Przekaż klientowi numer trackingowy i kwotę do zapłaty.",
+        "success",
       );
       setTrackingNumber(res.data.trackingNumber);
       setActiveTab("PAYMENT_LABEL");
       handleSearch();
     } catch (err) {
-      alert("Błąd podczas rejestracji paczki.");
+      addToast(
+        "Błąd rejestracji paczki. Sprawdź dane i spróbuj ponownie.",
+        "error",
+      );
     }
   };
 
   const handlePayment = async () => {
     try {
       await api.put(`/parcels/${parcel?.trackingNumber}/pay`);
-      alert("Płatność zaksięgowana pomyślnie!");
+      addToast("Płatność zaksięgowana pomyślnie!", "success");
       handleSearch(); // Odśwież widok
     } catch (err) {
-      alert("Błąd płatności");
+      addToast("Błąd płatności", "error");
     }
   };
 
@@ -107,7 +116,7 @@ export const CustomerServiceDashboard: React.FC = () => {
       link.click();
       link.remove();
     } catch {
-      alert("Błąd pobierania PDF");
+      addToast("Błąd pobierania PDF", "error");
     }
   };
 
@@ -121,12 +130,10 @@ export const CustomerServiceDashboard: React.FC = () => {
       await api.put(
         `/parcels/${parcel.trackingNumber}/override-status?status=${selectedStatus}${branchParam}`,
       );
-      alert(
-        "Status paczki został ręcznie zaktualizowany i przypisany do placówki.",
-      );
+      addToast("Status paczki został ręcznie zaktualizowany!", "success");
       handleSearch();
     } catch (err) {
-      alert("Błąd przy aktualizacji statusu.");
+      addToast("Błąd przy aktualizacji statusu.", "error");
     }
   };
 

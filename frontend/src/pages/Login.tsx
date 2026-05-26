@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const { login } = useAuth();
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -15,6 +17,7 @@ export const Login: React.FC = () => {
     try {
       const response = await api.post("/auth/login", { email, password });
       login(response.data.token);
+      addToast("Zalogowano pomyślnie!", "success");
       navigate("/dashboard");
     } catch (err) {
       setError("Nieprawidłowy email lub hasło");

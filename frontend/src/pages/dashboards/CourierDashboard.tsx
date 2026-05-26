@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 import type { Parcel } from "../../types/parcel";
+import { useToast } from "../../context/ToastContext";
 
 export const CourierDashboard: React.FC = () => {
   const [unassignedParcels, setUnassignedParcels] = useState<Parcel[]>([]);
   const [myRouteParcels, setMyRouteParcels] = useState<Parcel[]>([]);
-
+  const { addToast } = useToast();
   const fetchParcels = async () => {
     try {
       const unassignedRes = await api.get("/parcels/unassigned");
@@ -27,7 +28,7 @@ export const CourierDashboard: React.FC = () => {
       await api.put(`/parcels/${trackingNumber}/assign`);
       fetchParcels();
     } catch (error) {
-      alert("Błąd przypisywania paczki");
+      addToast("Błąd przypisywania paczki", "error");
     }
   };
 
@@ -38,11 +39,12 @@ export const CourierDashboard: React.FC = () => {
     } catch (error: any) {
       // Obsługa OptimisticLockingFailureException
       if (error.response?.status === 409 || error.response?.status === 500) {
-        alert(
-          "Konflikt wersji! Ktoś inny właśnie zaktualizował tę paczkę (Działa Optimistic Locking!).",
+        addToast(
+          "Konflikt wersji! Ktoś inny właśnie zaktualizował tę paczkę.",
+          "error",
         );
       } else {
-        alert("Błąd zmiany statusu paczki.");
+        addToast("Błąd zmiany statusu paczki.", "error");
       }
     }
   };

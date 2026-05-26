@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 import type { Parcel } from "../../types/parcel";
 import { Link } from "react-router-dom";
+import { useToast } from "../../context/ToastContext";
 
 export const ClientDashboard: React.FC = () => {
   const [myParcels, setMyParcels] = useState<Parcel[]>([]);
   const [complaintReason, setComplaintReason] = useState("");
   const [selectedParcel, setSelectedParcel] = useState("");
   const [complaintMsg, setComplaintMsg] = useState("");
+  const { addToast } = useToast();
 
   const fetchParcels = async () => {
     try {
@@ -43,10 +45,10 @@ export const ClientDashboard: React.FC = () => {
       // Symulacja przekierowania do PayU/Przelewy24
       alert("Przekierowywanie do bezpiecznej bramki płatności... (Symulacja)");
       await api.put(`/parcels/${trackingNumber}/pay/client`);
-      alert("Płatność przebiegła pomyślnie!");
+      addToast("Płatność zakończona pomyślnie!", "success");
       fetchParcels();
     } catch (err) {
-      alert("Wystąpił błąd podczas płatności.");
+      addToast("Wystąpił błąd podczas płatności.", "error");
     }
   };
 
@@ -63,7 +65,7 @@ export const ClientDashboard: React.FC = () => {
       link.click();
       link.remove();
     } catch {
-      alert("Błąd pobierania PDF");
+      addToast("Błąd pobierania PDF", "error");
     }
   };
 
