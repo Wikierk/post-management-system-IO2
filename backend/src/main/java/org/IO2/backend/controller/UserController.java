@@ -11,6 +11,7 @@ import org.IO2.backend.repository.BranchRepository;
 import org.IO2.backend.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping
     @Operation(summary = "Pobierz wszystkich użytkowników")
@@ -65,6 +67,27 @@ public class UserController {
         } else {
             user.setAssignedBranch(null); // Usunięcie przypisania
         }
+        return ResponseEntity.ok(userRepository.save(user));
+    }
+
+    @PutMapping("/{id}/details")
+    @Operation(summary = "Edytuj dane osobowe i hasło użytkownika (Admin)")
+    public ResponseEntity<?> updateUserDetails(@PathVariable Long id, @RequestBody ProfileController.ProfileUpdateRequest request) {
+        User user = userRepository.findById(id).orElseThrow();
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+
+        if (request.getEmail() != null && !request.getEmail().isBlank() && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                return ResponseEntity.badRequest().body("Adres email jest już zajęty.");
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
         return ResponseEntity.ok(userRepository.save(user));
     }
 }

@@ -46,6 +46,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UserDetails userDetails = userRepository.findByEmail(userEmail).orElse(null);
 
             if (userDetails != null && jwtService.isTokenValid(jwt, userDetails)) {
+                if (!userDetails.isAccountNonLocked()) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write("Konto zostalo zablokowane przez Administratora.");
+                    return;
+                }
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,

@@ -11,9 +11,13 @@ import org.IO2.backend.repository.UserRepository;
 import org.IO2.backend.security.JwtService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -52,14 +56,36 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Logowanie użytkownika")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-        var user = userRepository.findByEmail(request.getEmail()).orElseThrow();
+    public ResponseEntity<?> login(@RequestBody AuthRequest request) {
 
-        var extraClaims = new java.util.HashMap<String, Object>();
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(401).body(
+                    Map.of("message", "Nieprawidłowy email lub hasło")
+            );
+        }
+
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow();
+
+        if (user.isLocked()) {
+            return ResponseEntity.status(403).body(
+                    Map.of(
+                            "message",
+                            "Konto zostało zablokowane przez Administratora."
+                    )
+            );
+        }
+
+        var extraClaims = new HashMap<String, Object>();
         extraClaims.put("role", user.getRole().name());
+
         var jwtToken = jwtService.generateToken(extraClaims, user);
 
         return ResponseEntity.ok(new AuthResponse(jwtToken));

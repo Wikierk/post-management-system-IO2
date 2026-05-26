@@ -1,5 +1,6 @@
 package org.IO2.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -33,9 +34,10 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @JsonProperty("isLocked")
     @Column(nullable = false)
     private boolean isLocked = false;
-    
+
     @ManyToOne
     @JoinColumn(name = "assigned_branch_id")
     private Branch assignedBranch;

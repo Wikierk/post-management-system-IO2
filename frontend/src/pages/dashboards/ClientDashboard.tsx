@@ -3,27 +3,54 @@ import api from "../../api/axios";
 import type { Parcel } from "../../types/parcel";
 import { Link } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
+import { ParcelDetailsModal } from "../../components/ParcelDetailsModal";
 
 export const ClientDashboard: React.FC = () => {
-  const [myParcels, setMyParcels] = useState<Parcel[]>([]);
+  const { addToast } = useToast();
+  const [activeTab, setActiveTab] = useState<
+    "ACTIVE" | "ARCHIVE" | "COMPLAINTS" | "PROFILE"
+  >("ACTIVE");
+
+  // Stany
+  const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [selectedParcelForDetails, setSelectedParcelForDetails] = useState<
+    string | null
+  >(null);
+  const [profile, setProfile] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+  });
+
+  // Stany reklamacji
   const [complaintReason, setComplaintReason] = useState("");
   const [selectedParcel, setSelectedParcel] = useState("");
-  const [complaintMsg, setComplaintMsg] = useState("");
-  const { addToast } = useToast();
 
-  const fetchParcels = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.get("/parcels/my");
-      setMyParcels(res.data);
-    } catch (error) {
-      console.error("Błąd", error);
+      const resParcels = await api.get("/parcels/my");
+      setParcels(resParcels.data);
+      const resProfile = await api.get("/profile");
+      setProfile(resProfile.data);
+    } catch {
+      addToast("Błąd pobierania danych", "error");
     }
   };
 
   useEffect(() => {
-    fetchParcels();
+    fetchData();
   }, []);
 
+  // Podział na aktywne i archiwalne
+  const activeParcels = parcels.filter(
+    (p) => !["DELIVERED", "RETURNED"].includes(p.status || ""),
+  );
+  const archivedParcels = parcels.filter((p) =>
+    ["DELIVERED", "RETURNED"].includes(p.status || ""),
+  );
+
+  // Akcje
   const handleComplaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -31,164 +58,283 @@ export const ClientDashboard: React.FC = () => {
         trackingNumber: selectedParcel,
         reason: complaintReason,
       });
-      setComplaintMsg("Zgłoszenie wysłane!");
+      addToast("Zgłoszenie wysłane pomyślnie!", "success");
       setComplaintReason("");
-      fetchParcels(); // Odśwież żeby zmienić status na IN_COMPLAINT
+      fetchData();
     } catch {
-      setComplaintMsg("Błąd wysyłania zgłoszenia.");
+      addToast("Błąd wysyłania zgłoszenia.", "error");
     }
   };
 
-  // --- NOWE FUNKCJE: Płatność i PDF ---
   const handleClientPayment = async (trackingNumber: string) => {
     try {
-      // Symulacja przekierowania do PayU/Przelewy24
-      alert("Przekierowywanie do bezpiecznej bramki płatności... (Symulacja)");
       await api.put(`/parcels/${trackingNumber}/pay/client`);
-      addToast("Płatność zakończona pomyślnie!", "success");
-      fetchParcels();
-    } catch (err) {
+      addToast("Płatność przebiegła pomyślnie!", "success");
+      fetchData();
+    } catch {
       addToast("Wystąpił błąd podczas płatności.", "error");
     }
   };
 
-  const handleDownloadPdf = async (trackingNumber: string) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const response = await api.get(`/parcels/${trackingNumber}/label`, {
-        responseType: "blob",
+      await api.put("/profile", {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        password: profile.password || undefined,
       });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `etykieta_${trackingNumber}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      addToast("Profil zaktualizowany!", "success");
     } catch {
-      addToast("Błąd pobierania PDF", "error");
+      addToast("Błąd aktualizacji profilu.", "error");
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded shadow border-t-4 border-blue-500">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-blue-800">
-            Panel Klienta: Twoje Paczki
-          </h2>
-          <Link
-            to="/create-parcel"
-            className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700 font-bold shadow"
-          >
-            Nadaj Nową Paczkę
-          </Link>
-        </div>
+    <div className="bg-white rounded shadow min-h-[600px] border-t-4 border-blue-600">
+      {selectedParcelForDetails && (
+        <ParcelDetailsModal
+          trackingNumber={selectedParcelForDetails}
+          onClose={() => setSelectedParcelForDetails(null)}
+        />
+      )}
 
-        {myParcels.length === 0 ? (
-          <p className="text-gray-500">
-            Brak historii paczek. Nadaj swoją pierwszą przesyłkę!
-          </p>
-        ) : (
-          <ul className="space-y-4">
-            {myParcels.map((p) => (
-              <li
-                key={p.trackingNumber}
-                className="p-4 border border-gray-200 rounded-lg flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 transition"
-              >
-                <div className="mb-4 md:mb-0">
-                  <div className="font-black text-xl text-gray-800">
-                    {p.trackingNumber}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    Odbiorca:{" "}
-                    <span className="font-semibold">{p.receiverName}</span>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    Koszt przesyłki:{" "}
-                    <span className="font-semibold">{p.price} PLN</span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end space-y-2">
-                  <div className="text-sm font-bold text-gray-700 bg-gray-200 px-3 py-1 rounded-full uppercase">
-                    Status:{" "}
-                    <span
-                      className={
-                        p.status === "CREATED"
-                          ? "text-red-600"
-                          : "text-blue-600"
-                      }
-                    >
-                      {p.status}
-                    </span>
-                  </div>
-
-                  {/* LOGIKA PRZYCISKÓW */}
-                  {p.status === "CREATED" ? (
-                    <button
-                      onClick={() => handleClientPayment(p.trackingNumber!)}
-                      className="w-full md:w-auto px-4 py-2 bg-yellow-500 text-white rounded font-bold hover:bg-yellow-600 shadow"
-                    >
-                      Opłać Teraz
-                    </button>
-                  ) : p.status === "IN_COMPLAINT" ? (
-                    <span className="text-xs font-bold text-red-500">
-                      Zablokowana (Reklamacja)
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleDownloadPdf(p.trackingNumber!)}
-                      className="w-full md:w-auto px-4 py-2 bg-gray-800 text-white rounded font-bold hover:bg-gray-900 shadow text-xs"
-                    >
-                      Pobierz Etykietę PDF
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="flex justify-between items-center p-6 border-b">
+        <h2 className="text-2xl font-bold text-blue-800">Panel Klienta</h2>
+        <Link
+          to="/create-parcel"
+          className="px-6 py-2 text-white bg-green-600 rounded font-bold shadow hover:bg-green-700"
+        >
+          Nadaj Nową Paczkę
+        </Link>
       </div>
 
-      {/* SEKCJA REKLAMACJI */}
-      <div className="bg-white p-6 rounded shadow border-l-4 border-red-500">
-        <h3 className="text-lg font-bold text-red-700 mb-4">
-          Zgłoś problem z paczką (Reklamacja)
-        </h3>
-        <form onSubmit={handleComplaintSubmit} className="space-y-4 max-w-xl">
-          <select
-            required
-            className="w-full px-3 py-2 border rounded"
-            value={selectedParcel}
-            onChange={(e) => setSelectedParcel(e.target.value)}
-          >
-            <option value="" disabled>
-              Wybierz paczkę...
-            </option>
-            {myParcels
-              .filter((p) => p.status !== "IN_COMPLAINT")
-              .map((p) => (
-                <option key={p.trackingNumber} value={p.trackingNumber}>
-                  {p.trackingNumber}
+      {/* ZAKŁADKI */}
+      <div className="flex border-b overflow-x-auto bg-gray-50">
+        <button
+          onClick={() => setActiveTab("ACTIVE")}
+          className={`px-6 py-3 font-bold text-sm ${activeTab === "ACTIVE" ? "border-b-4 border-blue-600 text-blue-800" : "text-gray-500"}`}
+        >
+          Aktywne Przesyłki ({activeParcels.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("ARCHIVE")}
+          className={`px-6 py-3 font-bold text-sm ${activeTab === "ARCHIVE" ? "border-b-4 border-gray-600 text-gray-800" : "text-gray-500"}`}
+        >
+          Archiwum ({archivedParcels.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("COMPLAINTS")}
+          className={`px-6 py-3 font-bold text-sm ${activeTab === "COMPLAINTS" ? "border-b-4 border-red-600 text-red-800" : "text-gray-500"}`}
+        >
+          Reklamacje
+        </button>
+        <button
+          onClick={() => setActiveTab("PROFILE")}
+          className={`px-6 py-3 font-bold text-sm ${activeTab === "PROFILE" ? "border-b-4 border-purple-600 text-purple-800" : "text-gray-500"}`}
+        >
+          Mój Profil
+        </button>
+      </div>
+
+      <div className="p-6">
+        {/* TAB: AKTYWNE */}
+        {activeTab === "ACTIVE" && (
+          <div className="space-y-4">
+            {activeParcels.length === 0 ? (
+              <p className="text-gray-500">Brak aktywnych paczek.</p>
+            ) : (
+              activeParcels.map((p) => (
+                <div
+                  key={p.trackingNumber}
+                  className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-center bg-white shadow-sm hover:shadow-md transition"
+                >
+                  <div className="mb-4 md:mb-0">
+                    <div className="font-black text-xl text-gray-800">
+                      {p.trackingNumber}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Odbiorca:{" "}
+                      <span className="font-semibold">{p.receiverName}</span>
+                    </div>
+                    <div className="text-sm font-bold mt-2 uppercase text-blue-600">
+                      Status: {p.status}
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      onClick={() =>
+                        setSelectedParcelForDetails(p.trackingNumber!)
+                      }
+                      className="px-4 py-2 border-2 border-blue-600 text-blue-600 font-bold rounded hover:bg-blue-50"
+                    >
+                      Szczegóły
+                    </button>
+                    {p.status === "CREATED" && (
+                      <button
+                        onClick={() => handleClientPayment(p.trackingNumber!)}
+                        className="px-4 py-2 bg-yellow-500 text-white font-bold rounded hover:bg-yellow-600 shadow"
+                      >
+                        Opłać {p.price} PLN
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* TAB: ARCHIWUM */}
+        {activeTab === "ARCHIVE" && (
+          <div className="space-y-4 opacity-80">
+            {archivedParcels.length === 0 ? (
+              <p className="text-gray-500">Archiwum jest puste.</p>
+            ) : (
+              archivedParcels.map((p) => (
+                <div
+                  key={p.trackingNumber}
+                  className="p-4 border rounded-lg flex justify-between items-center bg-gray-50"
+                >
+                  <div>
+                    <div className="font-black text-lg text-gray-700">
+                      {p.trackingNumber}
+                    </div>
+                    <div className="text-sm font-bold text-gray-500">
+                      Zakończono: {p.status}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setSelectedParcelForDetails(p.trackingNumber!)
+                    }
+                    className="px-4 py-2 border border-gray-400 text-gray-600 font-bold rounded hover:bg-gray-200"
+                  >
+                    Podgląd
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* TAB: REKLAMACJE */}
+        {activeTab === "COMPLAINTS" && (
+          <div className="max-w-xl">
+            <h3 className="text-lg font-bold text-red-700 mb-4">
+              Zgłoś problem z paczką
+            </h3>
+            <form
+              onSubmit={handleComplaintSubmit}
+              className="space-y-4 bg-red-50 p-6 rounded border border-red-200"
+            >
+              <select
+                required
+                className="w-full px-3 py-2 border rounded"
+                value={selectedParcel}
+                onChange={(e) => setSelectedParcel(e.target.value)}
+              >
+                <option value="" disabled>
+                  Wybierz paczkę do reklamacji...
                 </option>
-              ))}
-          </select>
-          <textarea
-            required
-            placeholder="Opisz dokładnie problem..."
-            className="w-full px-3 py-2 border rounded h-24"
-            value={complaintReason}
-            onChange={(e) => setComplaintReason(e.target.value)}
-          ></textarea>
-          <button
-            type="submit"
-            className="px-6 py-2 bg-red-600 text-white font-bold rounded shadow hover:bg-red-700"
+                {parcels
+                  .filter((p) => p.status !== "IN_COMPLAINT")
+                  .map((p) => (
+                    <option key={p.trackingNumber} value={p.trackingNumber}>
+                      {p.trackingNumber}
+                    </option>
+                  ))}
+              </select>
+              <textarea
+                required
+                placeholder="Opisz dokładnie problem..."
+                className="w-full px-3 py-2 border rounded h-24"
+                value={complaintReason}
+                onChange={(e) => setComplaintReason(e.target.value)}
+              ></textarea>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-red-600 text-white font-bold rounded shadow hover:bg-red-700"
+              >
+                Wyślij Zgłoszenie
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* TAB: PROFIL */}
+        {activeTab === "PROFILE" && (
+          <form
+            onSubmit={handleProfileUpdate}
+            className="max-w-md space-y-4 bg-gray-50 p-6 rounded border"
           >
-            Wyślij Zgłoszenie
-          </button>
-          {complaintMsg && (
-            <span className="ml-4 font-bold text-red-600">{complaintMsg}</span>
-          )}
-        </form>
+            <h3 className="font-bold text-lg mb-4 text-purple-800">
+              Moje Dane i Zabezpieczenia
+            </h3>
+            <div>
+              <label className="block text-sm font-bold text-gray-700">
+                Email (Login)
+              </label>
+              <input
+                type="email"
+                required
+                value={profile.email}
+                onChange={(e) =>
+                  setProfile({ ...profile, email: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700">
+                Imię
+              </label>
+              <input
+                type="text"
+                required
+                value={profile.firstName}
+                onChange={(e) =>
+                  setProfile({ ...profile, firstName: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700">
+                Nazwisko
+              </label>
+              <input
+                type="text"
+                required
+                value={profile.lastName}
+                onChange={(e) =>
+                  setProfile({ ...profile, lastName: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+            <div className="pt-4 border-t">
+              <label className="block text-sm font-bold text-red-700">
+                Nowe Hasło (Zostaw puste by nie zmieniać)
+              </label>
+              <input
+                type="password"
+                placeholder="Wpisz nowe hasło..."
+                onChange={(e) =>
+                  setProfile({ ...profile, password: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded border-red-300"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-3 mt-4 bg-purple-600 text-white font-bold rounded shadow hover:bg-purple-700"
+            >
+              Zapisz Zmiany
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

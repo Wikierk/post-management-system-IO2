@@ -19,8 +19,11 @@ export const Login: React.FC = () => {
       login(response.data.token);
       addToast("Zalogowano pomyślnie!", "success");
       navigate("/dashboard");
-    } catch (err) {
-      setError("Nieprawidłowy email lub hasło");
+    } catch (err: any) {
+      const backendMessage =
+        err.response?.data?.message || "Wystąpił błąd logowania";
+
+      setError(backendMessage);
     }
   };
 
