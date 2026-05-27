@@ -130,7 +130,7 @@ class ParcelServiceTest {
         mockParcel.setCourier(new User());
 
         when(parcelRepository.findByTrackingNumber(trackingNumber)).thenReturn(Optional.of(mockParcel));
-        
+
         Exception exception = assertThrows(RuntimeException.class, () -> {
             parcelService.assignToCourier(trackingNumber, "new.courier@poczta.pl");
         });
