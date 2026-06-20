@@ -1,7 +1,6 @@
 package org.IO2.backend.controller;
 
 import java.util.List;
-
 import org.IO2.backend.model.Branch;
 import org.IO2.backend.repository.BranchRepository;
 import org.springframework.data.domain.Page;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -54,7 +52,7 @@ public class BranchController {
 
     @PostMapping
     @Operation(summary = "Dodaj nową placówkę")
-    @PreAuthorize("hasRole('ADMIN')") // Tylko admin może dodawać placówki
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Branch> createBranch(@RequestBody Branch branch) {
         return ResponseEntity.ok(branchRepository.save(branch));
     }
@@ -77,4 +75,5 @@ public class BranchController {
         branch.setType(updated.getType());
         return ResponseEntity.ok(branchRepository.save(branch));
     }
+
 }
