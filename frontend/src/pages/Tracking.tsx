@@ -175,7 +175,9 @@ export const Tracking: React.FC = () => {
                               d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                             ></path>
                           </svg>
-                          {record.branchInfo}
+                          {record.status === "DELIVERED"
+                            ? parcel.receiverAddress
+                            : record.branchInfo}
                         </div>
                       </div>
                     </div>

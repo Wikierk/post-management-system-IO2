@@ -46,109 +46,144 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold text-purple-800">
-        Cennik (Dynamiczny Wzorzec Strategii)
-      </h2>
-      <div className="grid grid-cols-1 gap-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-800">
+          Cennik Przesyłek
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5">
         {pricings.map((p) => (
           <div
             key={p.id}
-            className="p-4 border rounded shadow-sm bg-purple-50 flex flex-wrap items-center justify-between gap-4"
+            className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-6"
           >
-            <div className="font-black text-xl w-32">{p.size}</div>
-            <div className="flex flex-wrap gap-4">
-              <div>
-                <label className="text-xs font-bold">Cena Bazowa</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={p.basePrice}
-                  onChange={(e) =>
-                    setPricings(
-                      pricings.map((pr) =>
-                        pr.id === p.id
-                          ? {
-                              ...pr,
-                              basePrice: parseFloat(e.target.value),
-                            }
-                          : pr,
-                      ),
-                    )
-                  }
-                  className="w-24 border px-2 py-1 rounded"
-                />
+            {/* Kafelek z rozmiarem */}
+            <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center border border-purple-200 shadow-inner">
+              <span className="text-2xl font-black text-purple-700">{p.size}</span>
+            </div>
+
+            {/* Formularze w równej siatce */}
+            <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+              {/* Cena Bazowa */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Cena Bazowa
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={p.basePrice}
+                    onChange={(e) =>
+                      setPricings(
+                        pricings.map((pr) =>
+                          pr.id === p.id
+                            ? { ...pr, basePrice: parseFloat(e.target.value) || 0 }
+                            : pr,
+                        ),
+                      )
+                    }
+                    className="w-full bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 block pl-3 pr-8 py-2 transition-colors outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">
+                    zł
+                  </span>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-bold">+ za Kg</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={p.weightMultiplier}
-                  onChange={(e) =>
-                    setPricings(
-                      pricings.map((pr) =>
-                        pr.id === p.id
-                          ? {
-                              ...pr,
-                              weightMultiplier: parseFloat(e.target.value),
-                            }
-                          : pr,
-                      ),
-                    )
-                  }
-                  className="w-24 border px-2 py-1 rounded"
-                />
+
+              {/* Cena za Kg */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  + za Kg
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={p.weightMultiplier}
+                    onChange={(e) =>
+                      setPricings(
+                        pricings.map((pr) =>
+                          pr.id === p.id
+                            ? { ...pr, weightMultiplier: parseFloat(e.target.value) || 0 }
+                            : pr,
+                        ),
+                      )
+                    }
+                    className="w-full bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 block pl-3 pr-8 py-2 transition-colors outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">
+                    zł
+                  </span>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-bold">+ Priorytet</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={p.priorityAddon}
-                  onChange={(e) =>
-                    setPricings(
-                      pricings.map((pr) =>
-                        pr.id === p.id
-                          ? {
-                              ...pr,
-                              priorityAddon: parseFloat(e.target.value),
-                            }
-                          : pr,
-                      ),
-                    )
-                  }
-                  className="w-24 border px-2 py-1 rounded"
-                />
+
+              {/* Dodatek Priorytet */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  + Priorytet
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={p.priorityAddon}
+                    onChange={(e) =>
+                      setPricings(
+                        pricings.map((pr) =>
+                          pr.id === p.id
+                            ? { ...pr, priorityAddon: parseFloat(e.target.value) || 0 }
+                            : pr,
+                        ),
+                      )
+                    }
+                    className="w-full bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 block pl-3 pr-8 py-2 transition-colors outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">
+                    zł
+                  </span>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-bold">+ Ubezp.</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={p.insuranceAddon}
-                  onChange={(e) =>
-                    setPricings(
-                      pricings.map((pr) =>
-                        pr.id === p.id
-                          ? {
-                              ...pr,
-                              insuranceAddon: parseFloat(e.target.value),
-                            }
-                          : pr,
-                      ),
-                    )
-                  }
-                  className="w-24 border px-2 py-1 rounded"
-                />
+
+              {/* Dodatek Ubezpieczenie */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  + Ubezpieczenie
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={p.insuranceAddon}
+                    onChange={(e) =>
+                      setPricings(
+                        pricings.map((pr) =>
+                          pr.id === p.id
+                            ? { ...pr, insuranceAddon: parseFloat(e.target.value) || 0 }
+                            : pr,
+                        ),
+                      )
+                    }
+                    className="w-full bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 block pl-3 pr-8 py-2 transition-colors outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">
+                    zł
+                  </span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => updatePricing(p)}
-              className="px-6 py-2 bg-purple-600 text-white rounded font-bold hover:bg-purple-700"
-            >
-              Zapisz
-            </button>
+
+            {/* Przycisk akcji */}
+            <div className="w-full md:w-auto mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-0 border-gray-100 flex justify-end">
+              <button
+                onClick={() => updatePricing(p)}
+                className="w-full md:w-auto px-6 py-2.5 bg-purple-600 text-white rounded-lg font-bold shadow-sm hover:bg-purple-700 hover:shadow active:scale-95 transition-all"
+              >
+                Zapisz
+              </button>
+            </div>
           </div>
         ))}
       </div>
