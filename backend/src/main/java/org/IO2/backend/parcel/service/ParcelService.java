@@ -188,7 +188,6 @@ public class ParcelService {
         return savedParcel;
     }
 
-    // --- NOWA METODA: Pobieranie historii dla widoku śledzenia ---
     public List<ParcelController.HistoryDto> getParcelHistory(String trackingNumber) {
         List<ParcelHistory> historyList = parcelHistoryRepository.findByParcelTrackingNumberOrderByChangedAtDesc(trackingNumber);
 
