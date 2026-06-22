@@ -22,11 +22,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.IO2.backend.dto.ComplaintRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -119,10 +118,6 @@ public class ComplaintController {
         return ResponseEntity.ok(complaintRepository.save(complaint));
     }
 
-    @Data
-    public static class ComplaintRequest {
-        private String trackingNumber;
-        private String reason;
-    }
+
 }
 

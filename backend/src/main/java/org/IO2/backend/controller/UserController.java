@@ -1,7 +1,7 @@
 package org.IO2.backend.controller;
 
 import java.util.List;
-
+import org.IO2.backend.dto.ProfileUpdateRequest;
 import org.IO2.backend.model.Branch;
 import org.IO2.backend.model.Role;
 import org.IO2.backend.model.User;
@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -96,7 +95,7 @@ public class UserController {
 
     @PutMapping("/{id}/details")
     @Operation(summary = "Edytuj dane osobowe i hasło użytkownika (Admin)")
-    public ResponseEntity<?> updateUserDetails(@PathVariable Long id, @RequestBody ProfileController.ProfileUpdateRequest request) {
+    public ResponseEntity<?> updateUserDetails(@PathVariable Long id, @RequestBody ProfileUpdateRequest request) {
         User user = userRepository.findById(id).orElseThrow();
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());

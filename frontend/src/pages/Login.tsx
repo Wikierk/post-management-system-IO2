@@ -72,7 +72,7 @@ export const Login: React.FC = () => {
             Zarejestruj się
           </Link>
         </p>
-        <div className="mt-6 border-t pt-6">
+        {/* <div className="mt-6 border-t pt-6">
           <p className="text-xs text-center text-gray-500 mb-4">
             Lub użyj zewnętrznego dostawcy tożsamości (OAuth2)
           </p>
@@ -105,7 +105,7 @@ export const Login: React.FC = () => {
             </svg>
             Zaloguj przez Google
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -19,18 +19,23 @@ export const CustomerServiceDashboard: React.FC = () => {
 
   const [trackingNumber, setTrackingNumber] = useState("");
   const [parcel, setParcel] = useState<Parcel | null>(null);
+  
+  // Zmieniony stan - rozbity adres odbiorcy
   const [walkInForm, setWalkInForm] = useState({
     senderFirstName: "",
     senderLastName: "",
     senderEmail: "",
     receiverName: "",
     receiverEmail: "",
-    receiverAddress: "",
+    receiverStreet: "",
+    receiverCity: "",
+    receiverPostalCode: "",
     size: "SMALL",
     weight: 1.0,
     isPriority: false,
     isInsured: false,
   });
+  
   const [selectedStatus, setSelectedStatus] = useState("IN_SORTING");
   const [selectedBranchId, setSelectedBranchId] = useState<number | "">("");
   const { addToast } = useToast();
@@ -39,11 +44,14 @@ export const CustomerServiceDashboard: React.FC = () => {
     api.get("/branches").then((res) => setBranches(res.data));
   }, []);
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent, trackingOverride?: string) => {
     if (e) e.preventDefault();
+    const tn = trackingOverride ?? trackingNumber;
     try {
-      const res = await api.get(`/parcels/${trackingNumber}`);
+      const res = await api.get(`/parcels/${tn}`);
       setParcel(res.data);
+      // keep the input in sync when an override is used
+      if (trackingOverride) setTrackingNumber(tn);
     } catch {
       addToast(
         "Nie znaleziono paczki o podanym numerze lub wystąpił błąd.",
@@ -55,6 +63,10 @@ export const CustomerServiceDashboard: React.FC = () => {
 
   const handleWalkInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Połączenie adresu przed wysłaniem do backendu
+    const combinedReceiverAddress = `${walkInForm.receiverStreet.trim()}, ${walkInForm.receiverCity.trim()}, ${walkInForm.receiverPostalCode.trim()}`;
+
     try {
       const payload = {
         senderFirstName: walkInForm.senderFirstName,
@@ -63,7 +75,7 @@ export const CustomerServiceDashboard: React.FC = () => {
         parcelData: {
           receiverName: walkInForm.receiverName,
           receiverEmail: walkInForm.receiverEmail,
-          receiverAddress: walkInForm.receiverAddress,
+          receiverAddress: combinedReceiverAddress,
           size: walkInForm.size,
           weight: walkInForm.weight,
           isPriority: walkInForm.isPriority,
@@ -77,7 +89,23 @@ export const CustomerServiceDashboard: React.FC = () => {
       );
       setTrackingNumber(res.data.trackingNumber);
       setActiveTab("PAYMENT_LABEL");
-      handleSearch();
+      await handleSearch(undefined, res.data.trackingNumber);
+      
+      // Czyszczenie formularza po sukcesie
+      setWalkInForm({
+        senderFirstName: "",
+        senderLastName: "",
+        senderEmail: "",
+        receiverName: "",
+        receiverEmail: "",
+        receiverStreet: "",
+        receiverCity: "",
+        receiverPostalCode: "",
+        size: "SMALL",
+        weight: 1.0,
+        isPriority: false,
+        isInsured: false,
+      });
     } catch (err) {
       addToast(
         "Błąd rejestracji paczki. Sprawdź dane i spróbuj ponownie.",
@@ -217,6 +245,7 @@ export const CustomerServiceDashboard: React.FC = () => {
             )}
           </div>
         )}
+        
         {/* TAB: NOWY KLIENT */}
         {activeTab === "WALK_IN" && (
           <form
@@ -270,6 +299,7 @@ export const CustomerServiceDashboard: React.FC = () => {
                   />
                 </div>
               </div>
+              
               <div>
                 <h3 className="font-bold text-lg mb-4 text-blue-800 border-b pb-2">
                   2. Dane Odbiorcy
@@ -301,19 +331,49 @@ export const CustomerServiceDashboard: React.FC = () => {
                       })
                     }
                   />
+                  
+                  {/* Rozdzielone pola adresu */}
                   <input
                     type="text"
-                    placeholder="Adres Doręczenia"
+                    placeholder="Ulica i numer budynku/lokalu"
                     required
                     className="w-full px-3 py-2 border rounded"
-                    value={walkInForm.receiverAddress}
+                    value={walkInForm.receiverStreet}
                     onChange={(e) =>
                       setWalkInForm({
                         ...walkInForm,
-                        receiverAddress: e.target.value,
+                        receiverStreet: e.target.value,
                       })
                     }
                   />
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      placeholder="Miasto"
+                      required
+                      className="w-full px-3 py-2 border rounded w-2/3"
+                      value={walkInForm.receiverCity}
+                      onChange={(e) =>
+                        setWalkInForm({
+                          ...walkInForm,
+                          receiverCity: e.target.value,
+                        })
+                      }
+                    />
+                    <input
+                      type="text"
+                      placeholder="Kod pocztowy"
+                      required
+                      className="w-full px-3 py-2 border rounded w-1/3"
+                      value={walkInForm.receiverPostalCode}
+                      onChange={(e) =>
+                        setWalkInForm({
+                          ...walkInForm,
+                          receiverPostalCode: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -385,12 +445,14 @@ export const CustomerServiceDashboard: React.FC = () => {
             </button>
           </form>
         )}
+        
         {/* TAB: RĘCZNA EDYCJA I PLACÓWKA */}
         {activeTab === "MANUAL_STATUS" && (
           <div className="space-y-6 max-w-2xl bg-red-50 p-6 rounded-b border-x border-b border-red-200">
             <p className="text-sm text-red-700 mb-4 font-semibold">
-              UWAGA: Używasz modułu ręcznego nadpisywania statusu. Omija on
-              wzorzec maszyny stanów i twardo loguje akcję w historii.
+              UWAGA: Używasz modułu ręcznego nadpisywania statusu. 
+              Powinien on być używany tylko w wyjątkowych sytuacjach, takich jak 
+              awarie systemu lub błędne skanowanie.
             </p>
 
             <form onSubmit={handleSearch} className="flex space-x-2">

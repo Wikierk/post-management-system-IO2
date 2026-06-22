@@ -1,25 +1,45 @@
 import React, { useState } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
-import type { Parcel } from "../types/parcel";
 
 export const CreateParcel: React.FC = () => {
   const navigate = useNavigate();
-  const [parcel, setParcel] = useState<Parcel>({
+  
+  // Zastępujemy stan "parcel" stanem formularza, 
+  // aby przechować rozbity adres przed wysłaniem.
+  const [form, setForm] = useState({
     receiverName: "",
     receiverEmail: "",
-    receiverAddress: "",
+    receiverStreet: "",
+    receiverCity: "",
+    receiverPostalCode: "",
     size: "SMALL",
     weight: 1.0,
     isPriority: false,
     isInsured: false,
   });
+  
   const [successMsg, setSuccessMsg] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Złożenie adresu w jeden string
+    const combinedAddress = `${form.receiverStreet.trim()}, ${form.receiverCity.trim()}, ${form.receiverPostalCode.trim()}`;
+    
+    // Budowanie obiektu zgodnego z typem oczekiwanym przez backend (Parcel)
+    const payload = {
+      receiverName: form.receiverName,
+      receiverEmail: form.receiverEmail,
+      receiverAddress: combinedAddress,
+      size: form.size,
+      weight: form.weight,
+      isPriority: form.isPriority,
+      isInsured: form.isInsured,
+    };
+
     try {
-      const response = await api.post("/parcels", parcel);
+      const response = await api.post("/parcels", payload);
       setSuccessMsg(
         `Paczka utworzona! Numer nadania: ${response.data.trackingNumber} | Cena: ${response.data.price} zł`,
       );
@@ -50,11 +70,13 @@ export const CreateParcel: React.FC = () => {
             type="text"
             required
             className="w-full px-3 py-2 border rounded-md"
+            value={form.receiverName}
             onChange={(e) =>
-              setParcel({ ...parcel, receiverName: e.target.value })
+              setForm({ ...form, receiverName: e.target.value })
             }
           />
         </div>
+        
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Email Odbiorcy
@@ -63,35 +85,71 @@ export const CreateParcel: React.FC = () => {
             type="email"
             required
             className="w-full px-3 py-2 border rounded-md"
+            value={form.receiverEmail}
             onChange={(e) =>
-              setParcel({ ...parcel, receiverEmail: e.target.value })
+              setForm({ ...form, receiverEmail: e.target.value })
             }
           />
         </div>
+
+        {/* Rozdzielona sekcja adresu */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Adres Odbiorcy
+            Ulica i numer budynku/lokalu
           </label>
           <input
             type="text"
             required
             className="w-full px-3 py-2 border rounded-md"
+            value={form.receiverStreet}
             onChange={(e) =>
-              setParcel({ ...parcel, receiverAddress: e.target.value })
+              setForm({ ...form, receiverStreet: e.target.value })
             }
           />
         </div>
+        
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Miasto
+            </label>
+            <input
+              type="text"
+              required
+              className="w-full px-3 py-2 border rounded-md"
+              value={form.receiverCity}
+              onChange={(e) =>
+                setForm({ ...form, receiverCity: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Kod pocztowy
+            </label>
+            <input
+              type="text"
+              required
+              className="w-full px-3 py-2 border rounded-md"
+              value={form.receiverPostalCode}
+              onChange={(e) =>
+                setForm({ ...form, receiverPostalCode: e.target.value })
+              }
+            />
+          </div>
+        </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 pt-2">
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Gabaryt
             </label>
             <select
               className="w-full px-3 py-2 border rounded-md"
+              value={form.size}
               onChange={(e) =>
-                setParcel({
-                  ...parcel,
+                setForm({
+                  ...form,
                   size: e.target.value as "SMALL" | "MEDIUM" | "LARGE",
                 })
               }
@@ -111,21 +169,22 @@ export const CreateParcel: React.FC = () => {
               min="0.1"
               required
               className="w-full px-3 py-2 border rounded-md"
-              value={parcel.weight}
+              value={form.weight}
               onChange={(e) =>
-                setParcel({ ...parcel, weight: parseFloat(e.target.value) })
+                setForm({ ...form, weight: parseFloat(e.target.value) })
               }
             />
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-6 py-2">
           <label className="flex items-center">
             <input
               type="checkbox"
               className="w-4 h-4 text-blue-600 rounded"
+              checked={form.isPriority}
               onChange={(e) =>
-                setParcel({ ...parcel, isPriority: e.target.checked })
+                setForm({ ...form, isPriority: e.target.checked })
               }
             />
             <span className="ml-2 text-sm text-gray-700">Priorytet</span>
@@ -134,8 +193,9 @@ export const CreateParcel: React.FC = () => {
             <input
               type="checkbox"
               className="w-4 h-4 text-blue-600 rounded"
+              checked={form.isInsured}
               onChange={(e) =>
-                setParcel({ ...parcel, isInsured: e.target.checked })
+                setForm({ ...form, isInsured: e.target.checked })
               }
             />
             <span className="ml-2 text-sm text-gray-700">Ubezpieczenie</span>
@@ -144,7 +204,7 @@ export const CreateParcel: React.FC = () => {
 
         <button
           type="submit"
-          className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          className="w-full px-4 py-3 mt-2 text-white font-bold bg-blue-600 rounded-md hover:bg-blue-700 shadow-sm"
         >
           Wylicz cenę i Nadaj Paczkę
         </button>

@@ -1,13 +1,14 @@
 package org.IO2.backend.controller;
 
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.IO2.backend.model.Role;
 import org.IO2.backend.model.User;
 import org.IO2.backend.repository.UserRepository;
+import org.IO2.backend.dto.AuthRequest;
+import org.IO2.backend.dto.AuthResponse;
+import org.IO2.backend.dto.RegisterRequest;
 import org.IO2.backend.security.JwtService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,7 +16,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -91,25 +91,5 @@ public class AuthController {
         return ResponseEntity.ok(new AuthResponse(jwtToken));
     }
 
-
-    @Data
-    public static class RegisterRequest {
-        private String firstName;
-        private String lastName;
-        private String email;
-        private String password;
-    }
-
-    @Data
-    public static class AuthRequest {
-        private String email;
-        private String password;
-    }
-
-    @Data
-    @RequiredArgsConstructor
-    public static class AuthResponse {
-        private final String token;
-    }
 }
 

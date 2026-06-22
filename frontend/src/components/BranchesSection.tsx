@@ -5,18 +5,18 @@ import { Pagination } from "./Pagination";
 import { SearchFilter } from "./SearchFilter";
 import { ConfirmDialog } from "./ConfirmDialog";
 
-interface Branch {
-  id?: number;
-  name: string;
-  address: string;
-  type: string;
-}
-
 interface BranchesResponse {
   content: Branch[];
   totalPages: number;
   totalElements: number;
   number: number;
+}
+
+interface Branch {
+  id?: number;
+  name: string;
+  address: string;
+  type: string;
 }
 
 interface BranchesSectionProps {
@@ -32,11 +32,16 @@ export const BranchesSection: React.FC<BranchesSectionProps> = ({
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [branchForm, setBranchForm] = useState<Branch>({
+  
+  // Zmieniony stan formularza - trzyma wartości osobno
+  const [branchForm, setBranchForm] = useState({
     name: "",
-    address: "",
+    street: "",
+    city: "",
+    postalCode: "",
     type: "POST_OFFICE",
   });
+  
   const [editingBranchId, setEditingBranchId] = useState<number | null>(null);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -79,15 +84,27 @@ export const BranchesSection: React.FC<BranchesSectionProps> = ({
 
   const handleBranchSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Sklejanie adresu w jeden string przed wysłaniem do backendu
+    const combinedAddress = `${branchForm.street.trim()}, ${branchForm.city.trim()}, ${branchForm.postalCode.trim()}`;
+    
+    const payload: Branch = {
+      name: branchForm.name,
+      address: combinedAddress,
+      type: branchForm.type
+    };
+
     try {
       if (editingBranchId) {
-        await api.put(`/branches/${editingBranchId}`, branchForm);
+        await api.put(`/branches/${editingBranchId}`, payload);
         addToast("Placówka zaktualizowana!", "success");
       } else {
-        await api.post("/branches", branchForm);
+        await api.post("/branches", payload);
         addToast("Placówka dodana!", "success");
       }
-      setBranchForm({ name: "", address: "", type: "POST_OFFICE" });
+      
+      // Resetowanie formularza
+      setBranchForm({ name: "", street: "", city: "", postalCode: "", type: "POST_OFFICE" });
       setEditingBranchId(null);
       fetchBranches(1, searchTerm);
       onDataChanged();
@@ -97,7 +114,16 @@ export const BranchesSection: React.FC<BranchesSectionProps> = ({
   };
 
   const handleEditBranchClick = (branch: Branch) => {
-    setBranchForm(branch);
+    // Bezpieczne rozdzielanie adresu z backendu
+    const addressParts = branch.address ? branch.address.split(',').map(part => part.trim()) : [];
+    
+    setBranchForm({
+      name: branch.name,
+      street: addressParts[0] || "",
+      city: addressParts[1] || "",
+      postalCode: addressParts[2] || "",
+      type: branch.type,
+    });
     setEditingBranchId(branch.id!);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -151,58 +177,87 @@ export const BranchesSection: React.FC<BranchesSectionProps> = ({
         onSubmit={handleBranchSave}
         className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded border items-center"
       >
-        <input
-          type="text"
-          placeholder="Nazwa (np. UP Kielce 1)"
-          required
-          className="px-3 py-2 border rounded flex-1 min-w-[200px]"
-          value={branchForm.name}
-          onChange={(e) =>
-            setBranchForm({ ...branchForm, name: e.target.value })
-          }
-        />
-        <input
-          type="text"
-          placeholder="Adres"
-          required
-          className="px-3 py-2 border rounded flex-1 min-w-[200px]"
-          value={branchForm.address}
-          onChange={(e) =>
-            setBranchForm({ ...branchForm, address: e.target.value })
-          }
-        />
-        <select
-          className="px-3 py-2 border rounded"
-          value={branchForm.type}
-          onChange={(e) =>
-            setBranchForm({ ...branchForm, type: e.target.value })
-          }
-        >
-          <option value="POST_OFFICE">Urząd Pocztowy</option>
-          <option value="SORTING_CENTER">Sortownia</option>
-        </select>
-        <button
-          type="submit"
-          className={`px-6 py-2 text-white font-bold rounded ${editingBranchId ? "bg-orange-500" : "bg-red-600"}`}
-        >
-          {editingBranchId ? "Zapisz Zmiany" : "Dodaj Nową"}
-        </button>
-        {editingBranchId && (
-          <button
-            type="button"
-            onClick={() => {
-              setEditingBranchId(null);
-              setBranchForm({
-                name: "",
-                address: "",
-                type: "POST_OFFICE",
-              });
-            }}
-            className="px-4 py-2 text-gray-600 hover:underline"
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto flex-1">
+          <input
+            type="text"
+            placeholder="Nazwa"
+            required
+            className="px-3 py-2 border rounded flex-1 min-w-[150px]"
+            value={branchForm.name}
+            onChange={(e) =>
+              setBranchForm({ ...branchForm, name: e.target.value })
+            }
+          />
+          <input
+            type="text"
+            placeholder="Ulica i nr"
+            required
+            className="px-3 py-2 border rounded flex-1 min-w-[150px]"
+            value={branchForm.street}
+            onChange={(e) =>
+              setBranchForm({ ...branchForm, street: e.target.value })
+            }
+          />
+          <input
+            type="text"
+            placeholder="Miasto"
+            required
+            className="px-3 py-2 border rounded flex-1 min-w-[120px]"
+            value={branchForm.city}
+            onChange={(e) =>
+              setBranchForm({ ...branchForm, city: e.target.value })
+            }
+          />
+          <input
+            type="text"
+            placeholder="Kod pocztowy"
+            required
+            className="px-3 py-2 border rounded w-[130px]"
+            value={branchForm.postalCode}
+            onChange={(e) =>
+              setBranchForm({ ...branchForm, postalCode: e.target.value })
+            }
+          />
+          <select
+            className="px-3 py-2 border rounded w-[160px]"
+            value={branchForm.type}
+            onChange={(e) =>
+              setBranchForm({ ...branchForm, type: e.target.value })
+            }
           >
-            Anuluj
+            <option value="POST_OFFICE">Urząd Pocztowy</option>
+            <option value="SORTING_CENTER">Sortownia</option>
+          </select>
+        </div>
+        
+        <div className="flex gap-2 w-full lg:w-auto">
+          <button
+            type="submit"
+            className={`px-6 py-2 text-white font-bold rounded flex-1 lg:flex-none ${
+              editingBranchId ? "bg-orange-500" : "bg-red-600"
+            }`}
+          >
+            {editingBranchId ? "Zapisz Zmiany" : "Dodaj Nową"}
           </button>
-        )}
+          {editingBranchId && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingBranchId(null);
+                setBranchForm({
+                  name: "",
+                  street: "",
+                  city: "",
+                  postalCode: "",
+                  type: "POST_OFFICE",
+                });
+              }}
+              className="px-4 py-2 text-gray-600 hover:underline flex-none"
+            >
+              Anuluj
+            </button>
+          )}
+        </div>
       </form>
 
       <ul className="space-y-2">
